@@ -1,6 +1,5 @@
-name: Employee Data Pipeline CI
+name: Employee Medallion ETL Pipeline CI & Packaging
 
-# Bu workflow ne zaman çalışacak?
 on:
   push:
     branches: [ "main" ]
@@ -8,7 +7,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-test:
+  build-test-package:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,15 +21,27 @@ jobs:
       with:
         python-version: '3.10'
 
-    # 3. Gerekli kütüphaneleri yükle (PySpark vb.)
+    # 3. Bağımlılıkları yükle (PySpark, nbconvert vb.)
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pyspark nbconvert
+        pip install pyspark nbconvert pytest
 
-    # 4. Projedeki dosyaları ve yapıyı kontrol et
-    - name: Run basic sanity check
+    # 4. TESTING: Notebook dosyalarının varlığını ve yapısını kontrol et
+    - name: Validate Medallion Notebooks
       run: |
-        echo "Checking repository structure..."
-        ls -la
-        echo "CI Pipeline executed successfully!"
+        echo "=== Testing Notebook files ==="
+        test -f 01-Bronze-Emp.ipynb && echo "Bronze Notebook OK"
+        test -f 02-Silver-Emp.ipynb && echo "Silver Notebook OK"
+        test -f 03-Gold-Emp.ipynb && echo "Gold Notebook OK"
+
+    # 5. PACKAGING: Medallion ETL dosyalarını dağıtım paketi (Artifact) haline getir
+    - name: Create Pipeline Deployment Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: employee-etl-package
+        path: |
+          01-Bronze-Emp.ipynb
+          02-Silver-Emp.ipynb
+          03-Gold-Emp.ipynb
+          README.md
